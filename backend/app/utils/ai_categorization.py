@@ -39,18 +39,20 @@ from app.config import get_settings
 
 class AICategorizer:
 
-    def __init__(self, provider: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, provider: Optional[str] = None, api_key: Optional[str] = None, db: Optional[Any] = None):
         """
         Initialize the AI categorizer with the specified provider
 
         Args:
             provider: The AI provider to use (openai, anthropic, google, ollama)
             api_key: The API key for the provider (not needed for ollama)
+            db: SQLAlchemy database session for saving changes
         """
         settings = get_settings()
         self.provider = (provider or settings.DEFAULT_AI_PROVIDER).lower()
         self.api_key = api_key
         self.settings = settings
+        self.db = db
 
         logger.info(f"Initializing AICategorizer with provider: {self.provider}")
 
@@ -106,7 +108,8 @@ class AICategorizer:
             raise ValueError(f"Unsupported AI provider: {self.provider}")
 
     async def categorize_transaction(self, transaction_description: str, amount: float,
-                                     available_categories: List[Dict[str, Any]]) -> Optional[int]:
+                                     available_categories: List[Dict[str, Any]], 
+                                     transaction_id: Optional[int] = None) -> Optional[int]:
         """
         Categorize a transaction using AI
 
@@ -114,6 +117,7 @@ class AICategorizer:
             transaction_description: The description of the transaction
             amount: The amount of the transaction
             available_categories: List of available categories with their names and IDs
+            transaction_id: Optional ID of the transaction to update in the database
 
         Returns:
             The ID of the most appropriate category, or None if no category could be determined
@@ -165,6 +169,23 @@ class AICategorizer:
                 if not any(cat['id'] == category_id for cat in available_categories):
                     logger.warning(f"AI returned category ID {category_id} which is not in available categories")
                     return None
+
+                # If we have a db session and transaction_id, update the transaction
+                if self.db is not None and transaction_id is not None:
+                    from app.models.transactions import Transaction
+                    transaction = self.db.query(Transaction).filter(Transaction.id == transaction_id).first()
+                    if transaction:
+                        try:
+                            transaction.category_id = category_id
+                            self.db.add(transaction)  # Explicitly mark for update
+                            self.db.commit()
+                            self.db.refresh(transaction)  # Refresh to ensure changes are loaded
+                            logger.info(f"Updated transaction {transaction_id} with category {category_id}")
+                            logger.info(f"Verified category_id after update: {transaction.category_id}")
+                        except Exception as e:
+                            logger.error(f"Error saving category: {str(e)}")
+                            self.db.rollback()
+                            raise
 
                 logger.info(f"Successfully categorized as category ID: {category_id}")
                 return category_id

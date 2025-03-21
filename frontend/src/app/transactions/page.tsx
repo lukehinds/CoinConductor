@@ -8,8 +8,8 @@ interface Transaction {
   amount: number;
   description: string;
   date: string;
-  category_id: number;
-  category_name?: string;
+  category_id: number | null;
+  category_name: string;
   notes?: string;
   source: string;
 }
@@ -78,8 +78,11 @@ export default function Transactions() {
 
       const data = await response.json();
 
-      // Add category names to transactions
+      // Use category_name from backend response, fallback to finding it in categories if not present
       const transactionsWithCategoryNames = data.map((transaction: Transaction) => {
+        if (transaction.category_name) {
+          return transaction;
+        }
         const category = categories.find(c => c.id === transaction.category_id);
         return {
           ...transaction,

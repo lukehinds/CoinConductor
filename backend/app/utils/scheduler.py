@@ -47,8 +47,8 @@ async def categorize_uncategorized_transactions():
                 for category in categories
             ]
 
-            # Initialize AI categorizer
-            categorizer = AICategorizer()
+            # Initialize AI categorizer with db session
+            categorizer = AICategorizer(db=db)
 
             # Process each transaction
             for transaction in transactions:
@@ -56,11 +56,12 @@ async def categorize_uncategorized_transactions():
                     category_id = await categorizer.categorize_transaction(
                         transaction_description=transaction.description,
                         amount=transaction.amount,
-                        available_categories=categories_for_ai
+                        available_categories=categories_for_ai,
+                        transaction_id=transaction.id
                     )
 
+                    # No need to manually update the transaction as it's handled in categorize_transaction now
                     if category_id is not None:
-                        transaction.category_id = category_id
                         logger.info(
                             f"Categorized transaction {transaction.id} "
                             f"('{transaction.description}') as category {category_id}"

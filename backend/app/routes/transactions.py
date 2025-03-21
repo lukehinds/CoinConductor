@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime, date
 import logging
 import traceback
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 from app.db.database import get_db
 from app.models.users import User
@@ -190,19 +193,18 @@ async def create_transaction(
                 ]
 
                 # Initialize AI categorizer with default provider (ollama)
-                categorizer = AICategorizer()
+                categorizer = AICategorizer(db=db)
 
                 # Get category prediction
                 category_id = await categorizer.categorize_transaction(
                     transaction_description=transaction.description,
                     amount=transaction.amount,
-                    available_categories=categories_for_ai
+                    available_categories=categories_for_ai,
+                    transaction_id=db_transaction.id
                 )
 
-                # Update transaction if a category was assigned
+                # No need to manually update transaction as it's handled in categorize_transaction now
                 if category_id is not None:
-                    db_transaction.category_id = category_id
-                    db.commit()
                     db.refresh(db_transaction)
 
         except Exception as e:
@@ -219,7 +221,8 @@ async def read_transactions(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    # Use joinedload to eagerly load the category relationship
+    query = db.query(Transaction).options(joinedload(Transaction.category)).filter(Transaction.user_id == current_user.id)
 
     if category_id:
         query = query.filter(Transaction.category_id == category_id)
@@ -231,7 +234,27 @@ async def read_transactions(
         query = query.filter(Transaction.date <= end_date)
 
     transactions = query.order_by(Transaction.date.desc()).all()
-    return transactions
+    
+    # Convert transactions to response format with category names
+    response_transactions = []
+    for transaction in transactions:
+        transaction_dict = {
+            "id": transaction.id,
+            "amount": transaction.amount,
+            "description": transaction.description,
+            "date": transaction.date,
+            "category_id": transaction.category_id,
+            "category_name": transaction.category.name if transaction.category else "Uncategorized",
+            "source": transaction.source,
+            "notes": transaction.notes,
+            "external_id": transaction.external_id,
+            "created_at": transaction.created_at,
+            "updated_at": transaction.updated_at,
+            "user_id": transaction.user_id
+        }
+        response_transactions.append(transaction_dict)
+    
+    return response_transactions
 
 @router.get("/{transaction_id}/", response_model=TransactionSchema)
 async def read_transaction(
