@@ -76,7 +76,7 @@ export default function Transactions() {
       }
 
       const data = await response.json();
-      
+
       // Add category names to transactions
       const transactionsWithCategoryNames = data.map((transaction: Transaction) => {
         const category = categories.find(c => c.id === transaction.category_id);
@@ -85,7 +85,7 @@ export default function Transactions() {
           category_name: category ? category.name : 'Uncategorized'
         };
       });
-      
+
       setTransactions(transactionsWithCategoryNames);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';

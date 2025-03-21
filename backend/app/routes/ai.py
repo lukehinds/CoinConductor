@@ -9,6 +9,7 @@ from app.models.categories import Category
 from app.models.transactions import Transaction
 from app.utils.auth import get_current_active_user
 from app.utils.ai_categorization import AICategorizer
+from app.config import get_settings, Settings
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -21,17 +22,18 @@ class TransactionToCategorize(BaseModel):
     amount: float
 
 class CategoryPrediction(BaseModel):
-    category_id: int
-    category_name: str
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
     confidence: float = 1.0
 
 @router.post("/categorize/", response_model=CategoryPrediction)
 async def categorize_transaction(
     transaction: TransactionToCategorize,
-    provider: str = Query("openai", description="AI provider (openai, anthropic, google, ollama)"),
+    provider: Optional[str] = Query(None, description="AI provider (openai, anthropic, google, ollama)"),
     api_key: Optional[str] = Query(None, description="API key for the provider"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     # Get user's categories
     categories = db.query(Category).filter(Category.user_id == current_user.id).all()
@@ -59,11 +61,13 @@ async def categorize_transaction(
             available_categories=categories_for_ai
         )
 
-        # Get category name
-        category_name = next(
-            (cat["name"] for cat in categories_for_ai if cat["id"] == category_id),
-            "Unknown"
-        )
+        # Get category name if a category was assigned
+        category_name = None
+        if category_id is not None:
+            category_name = next(
+                (cat["name"] for cat in categories_for_ai if cat["id"] == category_id),
+                None
+            )
 
         return CategoryPrediction(
             category_id=category_id,
@@ -78,10 +82,11 @@ async def categorize_transaction(
 
 @router.post("/bulk-categorize/", response_model=List[Dict[str, Any]])
 async def bulk_categorize_transactions(
-    provider: str = Query("openai", description="AI provider (openai, anthropic, google, ollama)"),
+    provider: Optional[str] = Query(None, description="AI provider (openai, anthropic, google, ollama)"),
     api_key: Optional[str] = Query(None, description="API key for the provider"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     # Get uncategorized transactions (category_id is None or 0)
     uncategorized_transactions = db.query(Transaction).filter(
@@ -120,14 +125,17 @@ async def bulk_categorize_transactions(
                 available_categories=categories_for_ai
             )
 
-            # Update transaction
-            transaction.category_id = category_id
+            # Update transaction only if a category was assigned
+            if category_id is not None:
+                transaction.category_id = category_id
 
-            # Get category name
-            category_name = next(
-                (cat["name"] for cat in categories_for_ai if cat["id"] == category_id),
-                "Unknown"
-            )
+            # Get category name if a category was assigned
+            category_name = None
+            if category_id is not None:
+                category_name = next(
+                    (cat["name"] for cat in categories_for_ai if cat["id"] == category_id),
+                    None
+                )
 
             results.append({
                 "transaction_id": transaction.id,

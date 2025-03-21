@@ -2,6 +2,12 @@ import os
 from typing import Optional, Dict, Any, List
 import json
 from datetime import datetime
+import logging
+import httpx
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Import AI providers
 try:
@@ -28,8 +34,11 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
+from app.config import get_settings
+
 class AICategorizer:
-    def __init__(self, provider: str = "openai", api_key: Optional[str] = None):
+    
+    def __init__(self, provider: Optional[str] = None, api_key: Optional[str] = None):
         """
         Initialize the AI categorizer with the specified provider
 
@@ -37,26 +46,28 @@ class AICategorizer:
             provider: The AI provider to use (openai, anthropic, google, ollama)
             api_key: The API key for the provider (not needed for ollama)
         """
-        self.provider = provider.lower()
+        settings = get_settings()
+        self.provider = (provider or settings.DEFAULT_AI_PROVIDER).lower()
         self.api_key = api_key
+        self.settings = settings
 
         # Set up the client based on the provider
         if self.provider == "openai":
             if not OPENAI_AVAILABLE:
                 raise ImportError("OpenAI package not installed. Install with 'pip install openai'")
-            openai.api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+            openai.api_key = self.api_key or settings.OPENAI_API_KEY
             if not openai.api_key:
                 raise ValueError("OpenAI API key not provided")
 
         elif self.provider == "anthropic":
             if not ANTHROPIC_AVAILABLE:
                 raise ImportError("Anthropic package not installed. Install with 'pip install anthropic'")
-            self.client = anthropic.Anthropic(api_key=self.api_key or os.getenv("ANTHROPIC_API_KEY"))
+            self.client = anthropic.Anthropic(api_key=self.api_key or settings.ANTHROPIC_API_KEY)
 
         elif self.provider == "google":
             if not GOOGLE_AVAILABLE:
                 raise ImportError("Google Generative AI package not installed. Install with 'pip install google-generativeai'")
-            genai.configure(api_key=self.api_key or os.getenv("GOOGLE_API_KEY"))
+            genai.configure(api_key=self.api_key or settings.GOOGLE_API_KEY)
 
         elif self.provider == "ollama":
             if not OLLAMA_AVAILABLE:
@@ -67,7 +78,7 @@ class AICategorizer:
             raise ValueError(f"Unsupported AI provider: {self.provider}")
 
     async def categorize_transaction(self, transaction_description: str, amount: float,
-                                    available_categories: List[Dict[str, Any]]) -> str:
+                                    available_categories: List[Dict[str, Any]]) -> Optional[int]:
         """
         Categorize a transaction using AI
 
@@ -77,7 +88,7 @@ class AICategorizer:
             available_categories: List of available categories with their names and IDs
 
         Returns:
-            The ID of the most appropriate category
+            The ID of the most appropriate category, or None if no category could be determined
         """
         # Format the categories for the prompt
         categories_str = ", ".join([f"{cat['name']} (id: {cat['id']})" for cat in available_categories])
@@ -92,7 +103,8 @@ class AICategorizer:
         Available categories: {categories_str}
 
         Based on the transaction description and amount, which category ID is most appropriate?
-        Respond with only the category ID number.
+        If you cannot determine an appropriate category, respond with 'None'.
+        Otherwise respond with only the category ID number.
         """
 
         # Get the response from the AI provider
@@ -107,23 +119,26 @@ class AICategorizer:
 
         # Extract the category ID from the response
         try:
+            response_text = response.strip().lower()
+            if response_text == 'none':
+                return None
+                
             # Try to parse the response as an integer
-            category_id = int(response.strip())
+            category_id = int(response_text)
 
             # Verify that the category ID exists in available_categories
             if not any(cat['id'] == category_id for cat in available_categories):
-                # If not, default to the first category
-                category_id = available_categories[0]['id'] if available_categories else 1
+                return None
 
             return category_id
         except (ValueError, TypeError):
-            # If parsing fails, default to the first category
-            return available_categories[0]['id'] if available_categories else 1
+            # If parsing fails, return None instead of defaulting to first category
+            return None
 
     async def _categorize_with_openai(self, prompt: str) -> str:
         """Use OpenAI to categorize the transaction"""
         response = await openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=self.settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
                 {"role": "user", "content": prompt}
@@ -136,7 +151,7 @@ class AICategorizer:
     async def _categorize_with_anthropic(self, prompt: str) -> str:
         """Use Anthropic to categorize the transaction"""
         response = await self.client.messages.create(
-            model="claude-3-haiku-20240307",
+            model=self.settings.ANTHROPIC_MODEL,
             max_tokens=10,
             temperature=0.1,
             system="You are a financial assistant that categorizes transactions.",
@@ -148,17 +163,30 @@ class AICategorizer:
 
     async def _categorize_with_google(self, prompt: str) -> str:
         """Use Google Generative AI to categorize the transaction"""
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel(self.settings.GOOGLE_MODEL)
         response = model.generate_content(prompt)
         return response.text
 
     async def _categorize_with_ollama(self, prompt: str) -> str:
         """Use Ollama to categorize the transaction"""
-        response = await ollama.chat(
-            model="llama3",
-            messages=[
-                {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response['message']['content']
+        logger.info(f"Calling Ollama with model: {self.settings.OLLAMA_MODEL}")
+        logger.info(f"Prompt: {prompt}")
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": self.settings.OLLAMA_MODEL,
+                        "prompt": prompt,
+                        "system": "You are a financial assistant that categorizes transactions.",
+                        "stream": False
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                logger.info(f"Ollama response: {data}")
+                return data['response']
+        except Exception as e:
+            logger.error(f"Error calling Ollama: {str(e)}")
+            raise
