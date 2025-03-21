@@ -2,6 +2,12 @@ import os
 from typing import Optional, Dict, Any, List
 import json
 from datetime import datetime
+import logging
+import httpx
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Import AI providers
 try:
@@ -163,11 +169,24 @@ class AICategorizer:
 
     async def _categorize_with_ollama(self, prompt: str) -> str:
         """Use Ollama to categorize the transaction"""
-        response = ollama.chat(
-            model=self.settings.OLLAMA_MODEL,
-            messages=[
-                {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response['message']['content']
+        logger.info(f"Calling Ollama with model: {self.settings.OLLAMA_MODEL}")
+        logger.info(f"Prompt: {prompt}")
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": self.settings.OLLAMA_MODEL,
+                        "prompt": prompt,
+                        "system": "You are a financial assistant that categorizes transactions.",
+                        "stream": False
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                logger.info(f"Ollama response: {data}")
+                return data['response']
+        except Exception as e:
+            logger.error(f"Error calling Ollama: {str(e)}")
+            raise

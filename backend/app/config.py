@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     
     # AI Provider settings
-    DEFAULT_AI_PROVIDER: str = "openai"  # Supported: openai, anthropic, google, ollama
+    DEFAULT_AI_PROVIDER: str = "ollama"  # Supported: openai, anthropic, google, ollama
     
     # API Keys
     OPENAI_API_KEY: Optional[str] = None
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
     GOOGLE_MODEL: str = "gemini-pro"
-    OLLAMA_MODEL: str = "gemma:7b"
+    OLLAMA_MODEL: str = "gemma3:1b"
     
     class Config:
         env_file = ".env"
