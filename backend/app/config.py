@@ -5,7 +5,10 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database settings
-    DATABASE_URL: str = "sqlite:///./app.db"
+    DATABASE_URL: str = "sqlite:///./data/simplefin.db"
+    
+    # JWT Settings
+    SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     
     # AI Provider settings
     DEFAULT_AI_PROVIDER: str = "openai"  # Supported: openai, anthropic, google, ollama
@@ -19,7 +22,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     ANTHROPIC_MODEL: str = "claude-3-haiku-20240307"
     GOOGLE_MODEL: str = "gemini-pro"
-    OLLAMA_MODEL: str = "llama3"
+    OLLAMA_MODEL: str = "gemma:7b"
     
     class Config:
         env_file = ".env"

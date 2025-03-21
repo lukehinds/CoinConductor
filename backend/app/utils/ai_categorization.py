@@ -72,7 +72,7 @@ class AICategorizer:
             raise ValueError(f"Unsupported AI provider: {self.provider}")
 
     async def categorize_transaction(self, transaction_description: str, amount: float,
-                                    available_categories: List[Dict[str, Any]]) -> str:
+                                    available_categories: List[Dict[str, Any]]) -> Optional[int]:
         """
         Categorize a transaction using AI
 
@@ -82,7 +82,7 @@ class AICategorizer:
             available_categories: List of available categories with their names and IDs
 
         Returns:
-            The ID of the most appropriate category
+            The ID of the most appropriate category, or None if no category could be determined
         """
         # Format the categories for the prompt
         categories_str = ", ".join([f"{cat['name']} (id: {cat['id']})" for cat in available_categories])
@@ -97,7 +97,8 @@ class AICategorizer:
         Available categories: {categories_str}
 
         Based on the transaction description and amount, which category ID is most appropriate?
-        Respond with only the category ID number.
+        If you cannot determine an appropriate category, respond with 'None'.
+        Otherwise respond with only the category ID number.
         """
 
         # Get the response from the AI provider
@@ -112,18 +113,21 @@ class AICategorizer:
 
         # Extract the category ID from the response
         try:
+            response_text = response.strip().lower()
+            if response_text == 'none':
+                return None
+                
             # Try to parse the response as an integer
-            category_id = int(response.strip())
+            category_id = int(response_text)
 
             # Verify that the category ID exists in available_categories
             if not any(cat['id'] == category_id for cat in available_categories):
-                # If not, default to the first category
-                category_id = available_categories[0]['id'] if available_categories else 1
+                return None
 
             return category_id
         except (ValueError, TypeError):
-            # If parsing fails, default to the first category
-            return available_categories[0]['id'] if available_categories else 1
+            # If parsing fails, return None instead of defaulting to first category
+            return None
 
     async def _categorize_with_openai(self, prompt: str) -> str:
         """Use OpenAI to categorize the transaction"""
@@ -159,7 +163,7 @@ class AICategorizer:
 
     async def _categorize_with_ollama(self, prompt: str) -> str:
         """Use Ollama to categorize the transaction"""
-        response = await ollama.chat(
+        response = ollama.chat(
             model=self.settings.OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
