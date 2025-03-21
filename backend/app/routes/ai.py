@@ -114,7 +114,7 @@ async def bulk_categorize_transactions(
 
     try:
         # Initialize AI categorizer
-        categorizer = AICategorizer(provider=provider, api_key=api_key)
+        categorizer = AICategorizer(provider=provider, api_key=api_key, db=db)
 
         results = []
         for transaction in uncategorized_transactions:
@@ -122,12 +122,9 @@ async def bulk_categorize_transactions(
             category_id = await categorizer.categorize_transaction(
                 transaction_description=transaction.description,
                 amount=transaction.amount,
-                available_categories=categories_for_ai
+                available_categories=categories_for_ai,
+                transaction_id=transaction.id
             )
-
-            # Update transaction only if a category was assigned
-            if category_id is not None:
-                transaction.category_id = category_id
 
             # Get category name if a category was assigned
             category_name = None
@@ -147,6 +144,10 @@ async def bulk_categorize_transactions(
 
         # Commit changes
         db.commit()
+        
+        # Refresh all transactions to ensure they have the latest data
+        for transaction in uncategorized_transactions:
+            db.refresh(transaction)
 
         return results
 

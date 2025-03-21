@@ -8,8 +8,8 @@ interface Transaction {
   amount: number;
   description: string;
   date: string;
-  category_id: number;
-  category_name?: string;
+  category_id: number | null;
+  category_name: string;
   notes?: string;
   source: string;
 }
@@ -26,6 +26,7 @@ export default function Transactions() {
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
     amount: 0,
@@ -77,8 +78,11 @@ export default function Transactions() {
 
       const data = await response.json();
 
-      // Add category names to transactions
+      // Use category_name from backend response, fallback to finding it in categories if not present
       const transactionsWithCategoryNames = data.map((transaction: Transaction) => {
+        if (transaction.category_name) {
+          return transaction;
+        }
         const category = categories.find(c => c.id === transaction.category_id);
         return {
           ...transaction,
@@ -323,17 +327,65 @@ export default function Transactions() {
     });
   };
 
+  const handleBulkCategorize = async () => {
+    setIsCategorizing(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('http://localhost:8000/api/ai/bulk-categorize/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to bulk categorize transactions');
+      }
+
+      const data = await response.json();
+      console.log('Bulk categorization results:', data);
+      
+      // Refresh transactions to show new categories
+      await fetchTransactions();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+    } finally {
+      setIsCategorizing(false);
+    }
+  };
+
   return (
     <AuthLayout>
       <div className="px-4 py-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">Transactions</h1>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          >
-            Add Transaction
-          </button>
+          <div className="space-x-4">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Add Transaction
+            </button>
+            <button
+              onClick={handleBulkCategorize}
+              disabled={isCategorizing}
+              className={`${
+                isCategorizing ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-700'
+              } text-white font-bold py-2 px-4 rounded`}
+            >
+              {isCategorizing ? 'Categorizing...' : 'AI Bulk Categorize'}
+            </button>
+          </div>
         </div>
 
         {error && (

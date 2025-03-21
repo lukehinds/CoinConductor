@@ -1,17 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import logging
 
 from app.db.database import create_tables
 from app.db.migrations import run_migrations
 from app.routes import users, categories, transactions, auth, ai
 from app.routes.transactions import bank_router
+from app.utils.scheduler import setup_scheduler
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="CoinConductor API",
     description="API for CoinConductor personal budget application",
     version="0.1.0",
 )
+
+# Store scheduler instance
+scheduler = None
 
 # Configure CORS - allow all origins for development
 app.add_middleware(
@@ -32,8 +41,22 @@ app.include_router(ai.router, prefix="/api", tags=["AI"])
 
 @app.on_event("startup")
 async def startup_event():
+    global scheduler
     create_tables()
     run_migrations()
+    
+    # Set up and start the scheduler
+    scheduler = setup_scheduler()
+    scheduler.start()
+    logger.info("Started background scheduler")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global scheduler
+    # Shut down the scheduler gracefully if it exists
+    if scheduler:
+        scheduler.shutdown()
+        logger.info("Shut down background scheduler")
 
 @app.get("/api/health")
 async def health_check():

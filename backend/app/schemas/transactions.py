@@ -31,7 +31,22 @@ class TransactionInDB(TransactionBase):
         from_attributes = True
 
 class Transaction(TransactionInDB):
-    pass
+    category_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
+        @classmethod
+        def model_config(cls):
+            return {
+                'from_attributes': True,
+                'json_encoders': {
+                    datetime: lambda v: v.isoformat()
+                },
+                'computed_fields': {
+                    'category_name': lambda x: x.category.name if x.category else 'Uncategorized'
+                }
+            }
 
 class BankAccountBase(BaseModel):
     name: str
