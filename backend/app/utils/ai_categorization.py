@@ -136,8 +136,8 @@ class AICategorizer:
             Available categories: {categories_str}
 
             Based on the transaction description and amount, which category ID is most appropriate?
+            RESPOND WITH ONLY THE NUMBER. Do not include any other text, just the category ID number.
             If you cannot determine an appropriate category, respond with 'None'.
-            Otherwise respond with only the category ID number.
             """
 
             logger.info(f"Categorizing transaction: {transaction_description} (${amount})")
@@ -158,7 +158,11 @@ class AICategorizer:
             # Extract the category ID from the response
             try:
                 response_text = response.strip().lower()
-                if response_text == 'none':
+                
+                # Remove any extra text, just keep numbers or 'none'
+                response_text = ''.join(c for c in response_text if c.isdigit() or c == 'n')
+                
+                if response_text.startswith('n') or not response_text:
                     logger.info("AI returned 'None' - no suitable category found")
                     return None
 
