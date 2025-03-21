@@ -31,7 +31,7 @@ export default function Transactions() {
     amount: 0,
     description: '',
     date: '',
-    category_id: 0,
+    category_id: '',
     notes: '',
   });
   const [filters, setFilters] = useState({
@@ -155,7 +155,7 @@ export default function Transactions() {
         ...formData,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
         source: 'manual',
-        category_id: Number(formData.category_id),
+        category_id: formData.category_id === "" ? null : Number(formData.category_id),
       };
 
       console.log('Sending transaction data:', formattedData);
@@ -182,7 +182,7 @@ export default function Transactions() {
         amount: 0,
         description: '',
         date: '',
-        category_id: 0,
+        category_id: '',
         notes: '',
       });
       setShowAddForm(false);
@@ -209,7 +209,7 @@ export default function Transactions() {
       const formattedData = {
         ...formData,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
-        category_id: Number(formData.category_id),
+        category_id: formData.category_id === "" ? null : Number(formData.category_id),
       };
 
       console.log('Sending updated transaction data:', formattedData);
@@ -236,7 +236,7 @@ export default function Transactions() {
         amount: 0,
         description: '',
         date: '',
-        category_id: 0,
+        category_id: '',
         notes: '',
       });
       setSelectedTransaction(null);
@@ -286,7 +286,7 @@ export default function Transactions() {
       amount: transaction.amount,
       description: transaction.description,
       date: new Date(transaction.date).toISOString().split('T')[0],
-      category_id: transaction.category_id,
+      category_id: transaction.category_id ? transaction.category_id.toString() : '',
       notes: transaction.notes || '',
     });
     setShowEditForm(true);
@@ -569,10 +569,9 @@ export default function Transactions() {
                     name="category_id"
                     value={formData.category_id}
                     onChange={handleInputChange}
-                    required
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   >
-                    <option value="">Select a category</option>
+                    <option value="">Uncategorized</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
@@ -671,10 +670,9 @@ export default function Transactions() {
                     name="category_id"
                     value={formData.category_id}
                     onChange={handleInputChange}
-                    required
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   >
-                    <option value="">Select a category</option>
+                    <option value="">Uncategorized</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
