@@ -1,73 +1,142 @@
-# CoinConductor - Personal Budget Application
+# CoinConductor 💰
 
-CoinConductor is a personal budget application that uses the Envelope Budgeting methodology to help users manage their finances effectively.
+<div align="center">
 
-## Features
+![CoinConductor Logo](docs/assets/logo.png)
 
-- **User Accounts**: Create, update, and delete user accounts with secure authentication
-- **Envelope Budgeting System**: Divide your balance into customizable categories
-- **Transaction Tracking**: Enter transactions manually or import from bank statements
-- **Bank Integration**: Connect with banks using SimpleFIN Bridge or GoCardless API
-- **AI-Powered Categorization**: Automatically categorize transactions using AI
-- **Visual Interface**: Clean, user-friendly interface with responsive design
+A modern, AI-powered personal finance management system using the Envelope Budgeting methodology.
 
-## Tech Stack
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-blue.svg)](https://www.typescriptlang.org/)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.0.0-black.svg)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100.0-teal.svg)](https://fastapi.tiangolo.com/)
 
-- **Frontend**: Next.js with TypeScript and Tailwind CSS
-- **Backend**: Python with FastAPI and SQLite
-- **Authentication**: JWT-based authentication
-- **AI Integration**: Support for OpenAI, Anthropic, Google Gemini, and Ollama
+</div>
 
-## Getting Started
+## 🌟 Features
+
+### Core Functionality
+- 🔐 **Secure User Management**
+  - JWT-based authentication
+  - Profile customization
+  - Multi-factor authentication support
+- 💼 **Envelope Budgeting System**
+  - Create custom budget categories
+  - Flexible fund allocation
+  - Real-time balance tracking
+- 📊 **Transaction Management**
+  - Manual transaction entry
+  - Bank statement imports
+  - Recurring transaction support
+
+### Advanced Features
+- 🏦 **Bank Integration**
+  - SimpleFIN Bridge support
+  - GoCardless API integration
+  - Secure bank connection management
+- 🤖 **AI-Powered Features**
+  - Smart transaction categorization
+  - Spending pattern analysis
+  - Budget recommendations
+- 📱 **Modern UI/UX**
+  - Responsive design
+  - Dark/Light mode
+  - Interactive dashboards
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: React Context + Hooks
+- **Authentication**: JWT with HTTP-only cookies
+
+### Backend
+- **Framework**: FastAPI
+- **Language**: Python 3.8+
+- **Database**: SQLite (development) / PostgreSQL (production)
+- **Authentication**: JWT + OAuth2
+- **API Documentation**: OpenAPI (Swagger) + ReDoc
+
+### AI Integration
+- OpenAI GPT-4
+- Anthropic Claude
+- Google Gemini
+- Ollama (local models)
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js (v18 or higher)
 - Python (v3.8 or higher)
+- Docker and Docker Compose (optional)
 - npm or yarn
 
-### Installation
+### Quick Start with Docker
 
-1. Clone the repository
-2. Set up the backend:
+```bash
+# Clone the repository
+git clone https://github.com/lukehinds/coinconductor.git
+cd coinconductor
+
+# Start all services
+docker-compose up -d
+```
+
+Visit http://localhost:3000 to access the application.
+
+### Manual Installation
+
+1. **Backend Setup**
    ```bash
-   cd coinconductor/backend
+   cd backend
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # Windows: venv\Scripts\activate
    pip install -r requirements.txt
-   ```
-
-3. Set up the frontend:
-   ```bash
-   cd coinconductor/frontend
-   npm install
-   ```
-
-4. Configure environment variables:
-   - Copy `.env.example` to `.env` in both frontend and backend directories
-   - Update the values with your API keys and settings
-
-### Running the Application
-
-1. Start the backend server:
-   ```bash
-   cd coinconductor/backend
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   cp .env.example .env     # Configure your environment variables
    python run.py
    ```
 
-2. Start the frontend development server:
+2. **Frontend Setup**
    ```bash
-   cd coinconductor/frontend
+   cd frontend
+   npm install
+   cp .env.example .env.local  # Configure your environment variables
    npm run dev
    ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+3. **Development Script**
+   ```bash
+   # From the root directory
+   ./run-dev.sh  # Starts both frontend and backend
+   ```
 
-## API Documentation
+## 📚 Documentation
 
-Once the backend server is running, you can access the API documentation at `http://localhost:8000/docs` or `http://localhost:8000/redoc`.
+- **API Documentation**: Available at `http://localhost:8000/docs` or `http://localhost:8000/redoc`
+- **User Guide**: See [docs/user-guide.md](docs/user-guide.md)
+- **Developer Guide**: See [docs/developer-guide.md](docs/developer-guide.md)
+- **Architecture**: See [docs/architecture.md](docs/architecture.md)
 
-## License
+## 🤝 Contributing
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Thanks to all contributors who have helped shape CoinConductor
+- Built with support from the open-source community
+- Special thanks to our early adopters and testers
+
+---
+
+<div align="center">
+Made with ❤️ by the CoinConductor Team
+</div>
