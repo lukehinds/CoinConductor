@@ -9,6 +9,7 @@ from app.models.categories import Category
 from app.models.transactions import Transaction
 from app.utils.auth import get_current_active_user
 from app.utils.ai_categorization import AICategorizer
+from app.config import get_settings, Settings
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -28,10 +29,11 @@ class CategoryPrediction(BaseModel):
 @router.post("/categorize/", response_model=CategoryPrediction)
 async def categorize_transaction(
     transaction: TransactionToCategorize,
-    provider: str = Query("openai", description="AI provider (openai, anthropic, google, ollama)"),
+    provider: Optional[str] = Query(None, description="AI provider (openai, anthropic, google, ollama)"),
     api_key: Optional[str] = Query(None, description="API key for the provider"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     # Get user's categories
     categories = db.query(Category).filter(Category.user_id == current_user.id).all()
@@ -78,10 +80,11 @@ async def categorize_transaction(
 
 @router.post("/bulk-categorize/", response_model=List[Dict[str, Any]])
 async def bulk_categorize_transactions(
-    provider: str = Query("openai", description="AI provider (openai, anthropic, google, ollama)"),
+    provider: Optional[str] = Query(None, description="AI provider (openai, anthropic, google, ollama)"),
     api_key: Optional[str] = Query(None, description="API key for the provider"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     # Get uncategorized transactions (category_id is None or 0)
     uncategorized_transactions = db.query(Transaction).filter(

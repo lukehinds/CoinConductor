@@ -28,8 +28,11 @@ try:
 except ImportError:
     OLLAMA_AVAILABLE = False
 
+from app.config import get_settings
+
 class AICategorizer:
-    def __init__(self, provider: str = "openai", api_key: Optional[str] = None):
+    
+    def __init__(self, provider: Optional[str] = None, api_key: Optional[str] = None):
         """
         Initialize the AI categorizer with the specified provider
 
@@ -37,26 +40,28 @@ class AICategorizer:
             provider: The AI provider to use (openai, anthropic, google, ollama)
             api_key: The API key for the provider (not needed for ollama)
         """
-        self.provider = provider.lower()
+        settings = get_settings()
+        self.provider = (provider or settings.DEFAULT_AI_PROVIDER).lower()
         self.api_key = api_key
+        self.settings = settings
 
         # Set up the client based on the provider
         if self.provider == "openai":
             if not OPENAI_AVAILABLE:
                 raise ImportError("OpenAI package not installed. Install with 'pip install openai'")
-            openai.api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+            openai.api_key = self.api_key or settings.OPENAI_API_KEY
             if not openai.api_key:
                 raise ValueError("OpenAI API key not provided")
 
         elif self.provider == "anthropic":
             if not ANTHROPIC_AVAILABLE:
                 raise ImportError("Anthropic package not installed. Install with 'pip install anthropic'")
-            self.client = anthropic.Anthropic(api_key=self.api_key or os.getenv("ANTHROPIC_API_KEY"))
+            self.client = anthropic.Anthropic(api_key=self.api_key or settings.ANTHROPIC_API_KEY)
 
         elif self.provider == "google":
             if not GOOGLE_AVAILABLE:
                 raise ImportError("Google Generative AI package not installed. Install with 'pip install google-generativeai'")
-            genai.configure(api_key=self.api_key or os.getenv("GOOGLE_API_KEY"))
+            genai.configure(api_key=self.api_key or settings.GOOGLE_API_KEY)
 
         elif self.provider == "ollama":
             if not OLLAMA_AVAILABLE:
@@ -123,7 +128,7 @@ class AICategorizer:
     async def _categorize_with_openai(self, prompt: str) -> str:
         """Use OpenAI to categorize the transaction"""
         response = await openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=self.settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
                 {"role": "user", "content": prompt}
@@ -136,7 +141,7 @@ class AICategorizer:
     async def _categorize_with_anthropic(self, prompt: str) -> str:
         """Use Anthropic to categorize the transaction"""
         response = await self.client.messages.create(
-            model="claude-3-haiku-20240307",
+            model=self.settings.ANTHROPIC_MODEL,
             max_tokens=10,
             temperature=0.1,
             system="You are a financial assistant that categorizes transactions.",
@@ -148,14 +153,14 @@ class AICategorizer:
 
     async def _categorize_with_google(self, prompt: str) -> str:
         """Use Google Generative AI to categorize the transaction"""
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel(self.settings.GOOGLE_MODEL)
         response = model.generate_content(prompt)
         return response.text
 
     async def _categorize_with_ollama(self, prompt: str) -> str:
         """Use Ollama to categorize the transaction"""
         response = await ollama.chat(
-            model="llama3",
+            model=self.settings.OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": "You are a financial assistant that categorizes transactions."},
                 {"role": "user", "content": prompt}
