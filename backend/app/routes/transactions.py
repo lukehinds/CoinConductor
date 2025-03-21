@@ -326,26 +326,28 @@ async def create_transaction(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    # Verify category exists and belongs to user
-    category = db.query(Category).filter(
-        Category.id == transaction.category_id,
-        Category.user_id == current_user.id
-    ).first()
+    # If category_id is provided, verify it exists and belongs to user
+    if transaction.category_id is not None:
+        category = db.query(Category).filter(
+            Category.id == transaction.category_id,
+            Category.user_id == current_user.id
+        ).first()
 
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found",
-        )
+        if not category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Category not found",
+            )
 
     db_transaction = Transaction(
         amount=transaction.amount,
         description=transaction.description,
         date=transaction.date,
-        category_id=transaction.category_id,
+        category_id=transaction.category_id,  # This can now be None
         user_id=current_user.id,
         source=transaction.source,
         notes=transaction.notes,
+        external_id=transaction.external_id,
     )
     db.add(db_transaction)
     db.commit()

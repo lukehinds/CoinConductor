@@ -6,7 +6,7 @@ class TransactionBase(BaseModel):
     amount: float
     description: str
     date: datetime
-    category_id: int
+    category_id: Optional[int] = None
     source: str = "manual"
     notes: Optional[str] = None
     external_id: Optional[str] = None  # For storing external IDs like GoCardless payment IDs

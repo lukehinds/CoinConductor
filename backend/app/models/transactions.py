@@ -10,7 +10,7 @@ class Transaction(Base):
     amount = Column(Float)
     description = Column(String)
     date = Column(DateTime)
-    category_id = Column(Integer, ForeignKey("categories.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     source = Column(String)  # manual, import, api
     notes = Column(Text, nullable=True)
