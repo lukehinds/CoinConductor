@@ -44,7 +44,7 @@ async def startup_event():
     global scheduler
     create_tables()
     run_migrations()
-    
+
     # Set up and start the scheduler
     scheduler = setup_scheduler()
     scheduler.start()

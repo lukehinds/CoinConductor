@@ -144,7 +144,7 @@ async def bulk_categorize_transactions(
 
         # Commit changes
         db.commit()
-        
+
         # Refresh all transactions to ensure they have the latest data
         for transaction in uncategorized_transactions:
             db.refresh(transaction)
