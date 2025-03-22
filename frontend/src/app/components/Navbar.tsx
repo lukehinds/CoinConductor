@@ -37,12 +37,6 @@ export default function Navbar() {
                   Categories
                 </Link>
                 <Link
-                  href="/budget"
-                  className={`px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-all ${isActive('/budget')}`}
-                >
-                  Budget
-                </Link>
-                <Link
                   href="/transactions"
                   className={`px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-all ${isActive('/transactions')}`}
                 >
@@ -135,13 +129,6 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)}
             >
               Categories
-            </Link>
-            <Link
-              href="/budget"
-              className={`block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 transition-all ${isActive('/budget')}`}
-              onClick={() => setIsOpen(false)}
-            >
-              Budget
             </Link>
             <Link
               href="/transactions"
