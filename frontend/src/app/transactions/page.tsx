@@ -38,9 +38,11 @@ export default function Transactions() {
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
+    type: 'outgoing',
     amount: 0,
     description: '',
     date: '',
+    is_recurring: false,
     category_id: '',
     budget_period_id: '',
     notes: '',
@@ -225,9 +227,11 @@ export default function Transactions() {
 
       // Reset form and fetch updated transactions
       setFormData({
+        type: 'outgoing',
         amount: 0,
         description: '',
         date: '',
+        is_recurring: false,
         category_id: '',
         budget_period_id: '',
         notes: '',
@@ -281,9 +285,11 @@ export default function Transactions() {
 
       // Reset form and fetch updated transactions
       setFormData({
+        type: 'outgoing',
         amount: 0,
         description: '',
         date: '',
+        is_recurring: false,
         category_id: '',
         budget_period_id: '',
         notes: '',
@@ -332,9 +338,11 @@ export default function Transactions() {
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setFormData({
+      type: transaction.amount < 0 ? 'incoming' : 'outgoing',
       amount: transaction.amount,
       description: transaction.description,
       date: new Date(transaction.date).toISOString().split('T')[0],
+      is_recurring: false, // Default to false since we don't have this info in the transaction
       category_id: transaction.category_id ? transaction.category_id.toString() : '',
       budget_period_id: transaction.budget_period_id ? transaction.budget_period_id.toString() : '',
       notes: transaction.notes || '',
@@ -646,6 +654,21 @@ export default function Transactions() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Add Transaction</h2>
               <form onSubmit={handleAddSubmit}>
                 <div className="mb-4">
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <select
+                    id="type"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="incoming">Incoming</option>
+                    <option value="outgoing">Outgoing</option>
+                  </select>
+                </div>
+                <div className="mb-4">
                   <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                     Description
                   </label>
@@ -661,23 +684,52 @@ export default function Transactions() {
                 </div>
                 <div className="mb-4">
                   <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                    Amount (negative for income)
+                    Amount
                   </label>
                   <input
                     type="number"
                     id="amount"
                     name="amount"
-                    value={formData.amount}
-                    onChange={handleInputChange}
+                    value={Math.abs(formData.amount)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      // Set amount based on transaction type
+                      const amount = formData.type === 'incoming' ? -value : value;
+                      setFormData({
+                        ...formData,
+                        amount: amount
+                      });
+                    }}
                     required
                     step="0.01"
+                    min="0"
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                    Date
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                      Date
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_recurring"
+                        name="is_recurring"
+                        checked={formData.is_recurring}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            is_recurring: e.target.checked
+                          });
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="is_recurring" className="ml-2 block text-sm text-gray-700">
+                        Recurring
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     id="date"
@@ -766,6 +818,21 @@ export default function Transactions() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Edit Transaction</h2>
               <form onSubmit={handleEditSubmit}>
                 <div className="mb-4">
+                  <label htmlFor="edit-type" className="block text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <select
+                    id="edit-type"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="incoming">Incoming</option>
+                    <option value="outgoing">Outgoing</option>
+                  </select>
+                </div>
+                <div className="mb-4">
                   <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700">
                     Description
                   </label>
@@ -781,23 +848,52 @@ export default function Transactions() {
                 </div>
                 <div className="mb-4">
                   <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-700">
-                    Amount (negative for income)
+                    Amount
                   </label>
                   <input
                     type="number"
                     id="edit-amount"
                     name="amount"
-                    value={formData.amount}
-                    onChange={handleInputChange}
+                    value={Math.abs(formData.amount)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      // Set amount based on transaction type
+                      const amount = formData.type === 'incoming' ? -value : value;
+                      setFormData({
+                        ...formData,
+                        amount: amount
+                      });
+                    }}
                     required
                     step="0.01"
+                    min="0"
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700">
-                    Date
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700">
+                      Date
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="edit-is_recurring"
+                        name="is_recurring"
+                        checked={formData.is_recurring}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            is_recurring: e.target.checked
+                          });
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="edit-is_recurring" className="ml-2 block text-sm text-gray-700">
+                        Recurring
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     id="edit-date"
