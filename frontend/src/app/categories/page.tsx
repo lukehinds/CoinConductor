@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import AuthLayout from '../components/AuthLayout';
+import Navbar from '../components/Navbar';
 
 interface Category {
   id: number;
@@ -232,8 +232,9 @@ export default function Categories() {
   };
 
   return (
-    <AuthLayout>
-      <div className="px-4 py-6">
+    <>
+      <Navbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">Categories</h1>
           <div className="flex space-x-4">
@@ -442,6 +443,6 @@ export default function Categories() {
           </div>
         )}
       </div>
-    </AuthLayout>
+    </>
   );
 }

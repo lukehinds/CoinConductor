@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Navbar from '../components/Navbar';
 
 interface Category {
   id: number;
@@ -172,106 +173,33 @@ export default function Dashboard() {
     setCurrentMonth(newMonth);
   };
 
-  // Handle income update
-  const handleIncomeUpdate = async (amount: number) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Get the current budget period
-      const periodResponse = await fetch(`http://localhost:8000/api/budget/periods/month/?year=${currentMonth.split('-')[0]}&month=${currentMonth.split('-')[1]}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!periodResponse.ok) {
-        throw new Error('Failed to fetch budget period');
-      }
-
-      const periodData = await periodResponse.json();
-      
-      // Update the income for the period
-      const updateResponse = await fetch(`http://localhost:8000/api/budget/periods/${periodData.id}/`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          total_income: amount
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error('Failed to update income');
-      }
-
-      // Refresh data
-      window.location.reload();
-    } catch (err) {
-      console.error('Error updating income:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-  };
-
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md">
-        <div className="p-6">
-          <h1 className="text-3xl font-bold text-gray-800">{formatMonthDisplay(currentMonth)}</h1>
-        </div>
-        <nav className="mt-6">
-          <ul>
-            <li className="px-6 py-3 text-xl font-medium">
-              <Link href="/categories" className="text-gray-800 hover:text-primary-600">
-                Categories
-              </Link>
-            </li>
-            <li className="px-6 py-3 text-xl font-medium">
-              <Link href="/transactions" className="text-gray-800 hover:text-primary-600">
-                Transactions
-              </Link>
-            </li>
-            <li className="px-6 py-3 text-xl font-medium">
-              <Link href="/accounts" className="text-gray-800 hover:text-primary-600">
-                Bank Accounts
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6">
-          {/* Month Navigation */}
-          <div className="flex justify-between items-center mb-6">
+    <>
+      <Navbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          
+          <div className="flex items-center space-x-4">
             <button 
               onClick={() => handleMonthChange(getPreviousMonth(currentMonth))}
-              className="p-2 rounded-md hover:bg-gray-200"
+              className="p-2 rounded-md hover:bg-gray-100"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             </button>
+            <span className="text-lg font-medium">{formatMonthDisplay(currentMonth)}</span>
             <button 
               onClick={() => handleMonthChange(getNextMonth(currentMonth))}
-              className="p-2 rounded-md hover:bg-gray-200"
+              className="p-2 rounded-md hover:bg-gray-100"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
             </button>
           </div>
+        </div>
         
         {isLoading ? (
           <div className="flex justify-center my-12">
@@ -283,46 +211,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* Income Entry Section */}
-            <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Monthly Income</h3>
-                <div className="mt-2 max-w-xl text-sm text-gray-500">
-                  <p>Set your monthly income to allocate to categories.</p>
-                </div>
-                <form 
-                  className="mt-5 sm:flex sm:items-center"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    const income = parseFloat(formData.get('income') as string);
-                    if (!isNaN(income)) {
-                      handleIncomeUpdate(income);
-                    }
-                  }}
-                >
-                  <div className="w-full sm:max-w-xs">
-                    <label htmlFor="income" className="sr-only">Income Amount</label>
-                    <input
-                      type="number"
-                      name="income"
-                      id="income"
-                      className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Update Income
-                  </button>
-                </form>
-              </div>
-            </div>
-
             {/* Summary Cards */}
             <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -502,8 +390,7 @@ export default function Dashboard() {
             </div>
           </>
         )}
-        </div>
       </div>
-    </div>
+    </>
   );
 }
