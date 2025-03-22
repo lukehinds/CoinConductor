@@ -31,17 +31,27 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [currentMonth, setCurrentMonth] = useState('');
 
+  // Initialize with current month when component loads
   useEffect(() => {
-    // Set current month in YYYY-MM format
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const currentMonthStr = `${year}-${month}`;
-    setCurrentMonth(currentMonthStr);
+    // Set current month in YYYY-MM format if not already set
+    if (!currentMonth) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      setCurrentMonth(`${year}-${month}`);
+    }
+  }, []);
 
+  // Fetch data whenever currentMonth changes
+  useEffect(() => {
+    // Skip if currentMonth is not set yet
+    if (!currentMonth) return;
+    
     const fetchData = async () => {
       setIsLoading(true);
       setError('');
+      
+      console.log(`Fetching data for month: ${currentMonth}`);
 
       try {
         const token = localStorage.getItem('token');
@@ -50,8 +60,7 @@ export default function Dashboard() {
         }
 
         // Fetch categories
-        // Use the exact URL without relying on redirects
-        const categoriesResponse = await fetch(`http://localhost:8000/api/categories/?month=${currentMonthStr}`, {
+        const categoriesResponse = await fetch(`http://localhost:8000/api/categories/?month=${currentMonth}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -83,8 +92,7 @@ export default function Dashboard() {
         setTotalRemaining(remainingTotal);
 
         // Fetch transactions for the current month
-        // Use the exact URL without relying on redirects
-        const transactionsResponse = await fetch(`http://localhost:8000/api/transactions/?month=${currentMonthStr}&limit=10`, {
+        const transactionsResponse = await fetch(`http://localhost:8000/api/transactions/?month=${currentMonth}&limit=10`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

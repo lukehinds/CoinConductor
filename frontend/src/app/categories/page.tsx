@@ -25,16 +25,25 @@ export default function Categories() {
     budget_amount: 0,
   });
 
+  // Initialize with current month when component loads
   useEffect(() => {
-    // Set current month in YYYY-MM format
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const currentMonthStr = `${year}-${month}`;
-    setCurrentMonth(currentMonthStr);
-
-    fetchCategories(currentMonthStr);
+    // Set current month in YYYY-MM format if not already set
+    if (!currentMonth) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      setCurrentMonth(`${year}-${month}`);
+    }
   }, []);
+
+  // Fetch categories whenever currentMonth changes
+  useEffect(() => {
+    // Skip if currentMonth is not set yet
+    if (!currentMonth) return;
+    
+    console.log(`Fetching categories for month: ${currentMonth}`);
+    fetchCategories(currentMonth);
+  }, [currentMonth]);
 
   const fetchCategories = async (month: string) => {
     setIsLoading(true);
