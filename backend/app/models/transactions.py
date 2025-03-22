@@ -12,6 +12,7 @@ class Transaction(Base):
     date = Column(DateTime)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    budget_period_id = Column(Integer, ForeignKey("budget_periods.id"), nullable=True)
     source = Column(String)  # manual, import, api
     notes = Column(Text, nullable=True)
     external_id = Column(String, nullable=True)  # For storing external IDs like GoCardless payment IDs
@@ -21,6 +22,7 @@ class Transaction(Base):
     # Relationships
     category = relationship("Category", back_populates="transactions")
     user = relationship("User", back_populates="transactions")
+    budget_period = relationship("BudgetPeriod", back_populates="transactions")
 
 class BankAccount(Base):
     __tablename__ = "bank_accounts"

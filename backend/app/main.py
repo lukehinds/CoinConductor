@@ -5,7 +5,7 @@ import logging
 
 from app.db.database import create_tables
 from app.db.migrations import run_migrations
-from app.routes import users, categories, transactions, auth, ai
+from app.routes import users, categories, transactions, auth, ai, budget
 from app.routes.transactions import bank_router
 from app.utils.scheduler import setup_scheduler
 
@@ -38,6 +38,7 @@ app.include_router(categories.router, prefix="/api", tags=["Categories"])
 app.include_router(transactions.router, prefix="/api", tags=["Transactions"])
 app.include_router(bank_router, prefix="/api", tags=["Bank Accounts"])
 app.include_router(ai.router, prefix="/api", tags=["AI"])
+app.include_router(budget.router, prefix="/api", tags=["Budget"])
 
 @app.on_event("startup")
 async def startup_event():

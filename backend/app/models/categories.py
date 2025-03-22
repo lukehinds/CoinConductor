@@ -17,3 +17,4 @@ class Category(Base):
     # Relationships
     user = relationship("User", back_populates="categories")
     transactions = relationship("Transaction", back_populates="category", cascade="all, delete-orphan")
+    allocations = relationship("EnvelopeAllocation", back_populates="category", cascade="all, delete-orphan")

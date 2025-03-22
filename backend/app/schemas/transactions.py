@@ -7,6 +7,7 @@ class TransactionBase(BaseModel):
     description: str
     date: datetime
     category_id: Optional[int] = None
+    budget_period_id: Optional[int] = None
     source: str = "manual"
     notes: Optional[str] = None
     external_id: Optional[str] = None  # For storing external IDs like GoCardless payment IDs
@@ -19,6 +20,7 @@ class TransactionUpdate(BaseModel):
     description: Optional[str] = None
     date: Optional[datetime] = None
     category_id: Optional[int] = None
+    budget_period_id: Optional[int] = None
     notes: Optional[str] = None
 
 class TransactionInDB(TransactionBase):
