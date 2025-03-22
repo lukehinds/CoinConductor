@@ -1,12 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import date
 import logging
-import traceback
-
-# Set up logging
-logger = logging.getLogger(__name__)
 
 from app.db.database import get_db
 from app.models.users import User
@@ -23,6 +19,9 @@ from app.schemas.transactions import (
 from app.utils.auth import get_current_active_user
 from app.utils.ai_categorization import AICategorizer
 from app.config import get_settings, Settings
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
@@ -234,7 +233,7 @@ async def read_transactions(
         query = query.filter(Transaction.date <= end_date)
 
     transactions = query.order_by(Transaction.date.desc()).all()
-    
+
     # Convert transactions to response format with category names
     response_transactions = []
     for transaction in transactions:
@@ -253,7 +252,7 @@ async def read_transactions(
             "user_id": transaction.user_id
         }
         response_transactions.append(transaction_dict)
-    
+
     return response_transactions
 
 @router.get("/{transaction_id}/", response_model=TransactionSchema)

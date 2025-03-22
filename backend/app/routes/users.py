@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.db.database import get_db
 from app.models.users import User
@@ -29,7 +28,7 @@ async def update_user(
                 detail="Email already registered",
             )
         current_user.email = user_update.email
-    
+
     if user_update.username is not None:
         # Check if username already exists
         db_user = db.query(User).filter(User.username == user_update.username).first()
@@ -39,10 +38,10 @@ async def update_user(
                 detail="Username already registered",
             )
         current_user.username = user_update.username
-    
+
     if user_update.password is not None:
         current_user.hashed_password = get_password_hash(user_update.password)
-    
+
     db.commit()
     db.refresh(current_user)
     return current_user

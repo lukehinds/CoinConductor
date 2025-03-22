@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
 from pathlib import Path
 
 # Create database directory if it doesn't exist
@@ -36,5 +35,4 @@ def create_tables():
     """
     Create all tables in the database
     """
-    from app.models import users, categories, transactions
     Base.metadata.create_all(bind=engine)
