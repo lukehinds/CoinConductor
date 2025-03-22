@@ -246,7 +246,9 @@ export default function Dashboard() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Remaining
                   </dt>
-                  <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                  <dd className={`mt-1 text-3xl font-semibold ${
+                    totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
                     {formatCurrency(totalRemaining)}
                   </dd>
                 </div>
@@ -346,7 +348,7 @@ export default function Dashboard() {
                                   </p>
                                 </div>
                                 <div className={`text-sm font-medium ${
-                                  transaction.amount < 0 ? 'text-green-600' : 'text-red-600'
+                                  transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
                                   {formatCurrency(Math.abs(transaction.amount))}
                                 </div>
@@ -382,7 +384,7 @@ export default function Dashboard() {
                                   </p>
                                 </div>
                                 <div className={`text-sm font-medium ${
-                                  transaction.amount < 0 ? 'text-green-600' : 'text-red-600'
+                                  transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
                                   {formatCurrency(Math.abs(transaction.amount))}
                                 </div>
