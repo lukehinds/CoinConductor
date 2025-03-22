@@ -10,6 +10,7 @@ interface Transaction {
   date: string;
   category_id: number | null;
   category_name: string;
+  budget_period_id: number | null;
   notes?: string;
   source: string;
 }
@@ -19,9 +20,17 @@ interface Category {
   name: string;
 }
 
+interface BudgetPeriod {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
 export default function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [budgetPeriods, setBudgetPeriods] = useState<BudgetPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,22 +38,55 @@ export default function Transactions() {
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
+    type: 'outgoing',
     amount: 0,
     description: '',
     date: '',
+    is_recurring: false,
     category_id: '',
+    budget_period_id: '',
     notes: '',
   });
   const [filters, setFilters] = useState({
     category_id: '',
+    budget_period_id: '',
     start_date: '',
     end_date: '',
   });
 
   useEffect(() => {
     fetchCategories();
+    fetchBudgetPeriods();
     fetchTransactions();
   }, []);
+
+  const fetchBudgetPeriods = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('http://localhost:8000/api/budget/periods/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch budget periods');
+      }
+
+      const data = await response.json();
+      setBudgetPeriods(data);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+    }
+  };
 
   const fetchTransactions = async () => {
     setIsLoading(true);
@@ -59,6 +101,7 @@ export default function Transactions() {
       // Build query string from filters
       const queryParams = new URLSearchParams();
       if (filters.category_id) queryParams.append('category_id', filters.category_id);
+      if (filters.budget_period_id) queryParams.append('budget_period_id', filters.budget_period_id);
       if (filters.start_date) queryParams.append('start_date', filters.start_date);
       if (filters.end_date) queryParams.append('end_date', filters.end_date);
 
@@ -160,6 +203,7 @@ export default function Transactions() {
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
         source: 'manual',
         category_id: formData.category_id === "" ? null : Number(formData.category_id),
+        budget_period_id: formData.budget_period_id === "" ? null : Number(formData.budget_period_id),
       };
 
       console.log('Sending transaction data:', formattedData);
@@ -183,10 +227,13 @@ export default function Transactions() {
 
       // Reset form and fetch updated transactions
       setFormData({
+        type: 'outgoing',
         amount: 0,
         description: '',
         date: '',
+        is_recurring: false,
         category_id: '',
+        budget_period_id: '',
         notes: '',
       });
       setShowAddForm(false);
@@ -214,6 +261,7 @@ export default function Transactions() {
         ...formData,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
         category_id: formData.category_id === "" ? null : Number(formData.category_id),
+        budget_period_id: formData.budget_period_id === "" ? null : Number(formData.budget_period_id),
       };
 
       console.log('Sending updated transaction data:', formattedData);
@@ -237,10 +285,13 @@ export default function Transactions() {
 
       // Reset form and fetch updated transactions
       setFormData({
+        type: 'outgoing',
         amount: 0,
         description: '',
         date: '',
+        is_recurring: false,
         category_id: '',
+        budget_period_id: '',
         notes: '',
       });
       setSelectedTransaction(null);
@@ -287,10 +338,13 @@ export default function Transactions() {
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setFormData({
+      type: transaction.amount < 0 ? 'incoming' : 'outgoing',
       amount: transaction.amount,
       description: transaction.description,
       date: new Date(transaction.date).toISOString().split('T')[0],
+      is_recurring: false, // Default to false since we don't have this info in the transaction
       category_id: transaction.category_id ? transaction.category_id.toString() : '',
+      budget_period_id: transaction.budget_period_id ? transaction.budget_period_id.toString() : '',
       notes: transaction.notes || '',
     });
     setShowEditForm(true);
@@ -304,6 +358,7 @@ export default function Transactions() {
   const handleResetFilters = () => {
     setFilters({
       category_id: '',
+      budget_period_id: '',
       start_date: '',
       end_date: '',
     });
@@ -406,7 +461,7 @@ export default function Transactions() {
             <div className="mt-5 md:mt-0 md:col-span-2">
               <form onSubmit={handleApplyFilters}>
                 <div className="grid grid-cols-6 gap-6">
-                  <div className="col-span-6 sm:col-span-2">
+                  <div className="col-span-6 sm:col-span-3">
                     <label htmlFor="category_id" className="block text-sm font-medium text-gray-700">
                       Category
                     </label>
@@ -421,6 +476,26 @@ export default function Transactions() {
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-span-6 sm:col-span-3">
+                    <label htmlFor="budget_period_id" className="block text-sm font-medium text-gray-700">
+                      Budget Period
+                    </label>
+                    <select
+                      id="budget_period_id"
+                      name="budget_period_id"
+                      value={filters.budget_period_id}
+                      onChange={handleFilterChange}
+                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    >
+                      <option value="">All Budget Periods</option>
+                      {budgetPeriods.map((period) => (
+                        <option key={period.id} value={period.id}>
+                          {period.name}
                         </option>
                       ))}
                     </select>
@@ -508,6 +583,12 @@ export default function Transactions() {
                     </th>
                     <th
                       scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Budget Period
+                    </th>
+                    <th
+                      scope="col"
                       className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Amount
@@ -531,6 +612,9 @@ export default function Transactions() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {transaction.category_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {budgetPeriods.find(p => p.id === transaction.budget_period_id)?.name || 'None'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                         <span
@@ -570,6 +654,21 @@ export default function Transactions() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Add Transaction</h2>
               <form onSubmit={handleAddSubmit}>
                 <div className="mb-4">
+                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <select
+                    id="type"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="incoming">Incoming</option>
+                    <option value="outgoing">Outgoing</option>
+                  </select>
+                </div>
+                <div className="mb-4">
                   <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                     Description
                   </label>
@@ -585,23 +684,52 @@ export default function Transactions() {
                 </div>
                 <div className="mb-4">
                   <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                    Amount (negative for income)
+                    Amount
                   </label>
                   <input
                     type="number"
                     id="amount"
                     name="amount"
-                    value={formData.amount}
-                    onChange={handleInputChange}
+                    value={Math.abs(formData.amount)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      // Set amount based on transaction type
+                      const amount = formData.type === 'incoming' ? -value : value;
+                      setFormData({
+                        ...formData,
+                        amount: amount
+                      });
+                    }}
                     required
                     step="0.01"
+                    min="0"
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                    Date
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                      Date
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_recurring"
+                        name="is_recurring"
+                        checked={formData.is_recurring}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            is_recurring: e.target.checked
+                          });
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="is_recurring" className="ml-2 block text-sm text-gray-700">
+                        Recurring
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     id="date"
@@ -627,6 +755,25 @@ export default function Transactions() {
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="budget_period_id" className="block text-sm font-medium text-gray-700">
+                    Budget Period
+                  </label>
+                  <select
+                    id="budget_period_id"
+                    name="budget_period_id"
+                    value={formData.budget_period_id}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="">None</option>
+                    {budgetPeriods.map((period) => (
+                      <option key={period.id} value={period.id}>
+                        {period.name}
                       </option>
                     ))}
                   </select>
@@ -671,6 +818,21 @@ export default function Transactions() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Edit Transaction</h2>
               <form onSubmit={handleEditSubmit}>
                 <div className="mb-4">
+                  <label htmlFor="edit-type" className="block text-sm font-medium text-gray-700">
+                    Type
+                  </label>
+                  <select
+                    id="edit-type"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="incoming">Incoming</option>
+                    <option value="outgoing">Outgoing</option>
+                  </select>
+                </div>
+                <div className="mb-4">
                   <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700">
                     Description
                   </label>
@@ -686,23 +848,52 @@ export default function Transactions() {
                 </div>
                 <div className="mb-4">
                   <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-700">
-                    Amount (negative for income)
+                    Amount
                   </label>
                   <input
                     type="number"
                     id="edit-amount"
                     name="amount"
-                    value={formData.amount}
-                    onChange={handleInputChange}
+                    value={Math.abs(formData.amount)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      // Set amount based on transaction type
+                      const amount = formData.type === 'incoming' ? -value : value;
+                      setFormData({
+                        ...formData,
+                        amount: amount
+                      });
+                    }}
                     required
                     step="0.01"
+                    min="0"
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                 </div>
                 <div className="mb-4">
-                  <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700">
-                    Date
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700">
+                      Date
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="edit-is_recurring"
+                        name="is_recurring"
+                        checked={formData.is_recurring}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            is_recurring: e.target.checked
+                          });
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="edit-is_recurring" className="ml-2 block text-sm text-gray-700">
+                        Recurring
+                      </label>
+                    </div>
+                  </div>
                   <input
                     type="date"
                     id="edit-date"
@@ -728,6 +919,25 @@ export default function Transactions() {
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label htmlFor="edit-budget_period_id" className="block text-sm font-medium text-gray-700">
+                    Budget Period
+                  </label>
+                  <select
+                    id="edit-budget_period_id"
+                    name="budget_period_id"
+                    value={formData.budget_period_id}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  >
+                    <option value="">None</option>
+                    {budgetPeriods.map((period) => (
+                      <option key={period.id} value={period.id}>
+                        {period.name}
                       </option>
                     ))}
                   </select>

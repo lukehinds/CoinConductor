@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import AuthLayout from '../components/AuthLayout';
+import Navbar from '../components/Navbar';
 
 interface Category {
   id: number;
@@ -25,16 +25,25 @@ export default function Categories() {
     budget_amount: 0,
   });
 
+  // Initialize with current month when component loads
   useEffect(() => {
-    // Set current month in YYYY-MM format
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const currentMonthStr = `${year}-${month}`;
-    setCurrentMonth(currentMonthStr);
-
-    fetchCategories(currentMonthStr);
+    // Set current month in YYYY-MM format if not already set
+    if (!currentMonth) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      setCurrentMonth(`${year}-${month}`);
+    }
   }, []);
+
+  // Fetch categories whenever currentMonth changes
+  useEffect(() => {
+    // Skip if currentMonth is not set yet
+    if (!currentMonth) return;
+    
+    console.log(`Fetching categories for month: ${currentMonth}`);
+    fetchCategories(currentMonth);
+  }, [currentMonth]);
 
   const fetchCategories = async (month: string) => {
     setIsLoading(true);
@@ -232,8 +241,9 @@ export default function Categories() {
   };
 
   return (
-    <AuthLayout>
-      <div className="px-4 py-6">
+    <>
+      <Navbar />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">Categories</h1>
           <div className="flex space-x-4">
@@ -442,6 +452,6 @@ export default function Categories() {
           </div>
         )}
       </div>
-    </AuthLayout>
+    </>
   );
 }

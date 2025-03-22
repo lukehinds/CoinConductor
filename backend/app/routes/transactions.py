@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 import logging
+import calendar
 
 from app.db.database import get_db
 from app.models.users import User
 from app.models.categories import Category
 from app.models.transactions import Transaction, BankAccount
+from app.models.budget import BudgetPeriod
 from app.schemas.transactions import (
     Transaction as TransactionSchema,
     TransactionCreate,
@@ -165,11 +167,50 @@ async def create_transaction(
                 detail="Category not found",
             )
 
+    # If budget_period_id is not provided, find or create the appropriate budget period based on the transaction date
+    budget_period_id = transaction.budget_period_id
+    if budget_period_id is None:
+        # Get the year and month from the transaction date
+        transaction_date = transaction.date
+        year = transaction_date.year
+        month = transaction_date.month
+        
+        # Find a budget period that matches this month and year
+        first_day = datetime(year, month, 1)
+        last_day = datetime(year, month, calendar.monthrange(year, month)[1], 23, 59, 59)
+        
+        budget_period = db.query(BudgetPeriod).filter(
+            BudgetPeriod.user_id == current_user.id,
+            BudgetPeriod.start_date == first_day,
+            BudgetPeriod.end_date >= last_day
+        ).first()
+        
+        # If no matching budget period exists, create one
+        if not budget_period:
+            # Create a name for the budget period (e.g., "March 2025")
+            name = first_day.strftime("%B %Y")
+            
+            # Create the budget period with default income of 0
+            budget_period = BudgetPeriod(
+                name=name,
+                start_date=first_day,
+                end_date=last_day,
+                total_income=0.0,
+                user_id=current_user.id,
+            )
+            
+            db.add(budget_period)
+            db.commit()
+            db.refresh(budget_period)
+        
+        budget_period_id = budget_period.id
+
     db_transaction = Transaction(
         amount=transaction.amount,
         description=transaction.description,
         date=transaction.date,
         category_id=transaction.category_id,
+        budget_period_id=budget_period_id,
         user_id=current_user.id,
         source=transaction.source,
         notes=transaction.notes,
@@ -215,6 +256,7 @@ async def create_transaction(
 @router.get("/", response_model=List[TransactionSchema])
 async def read_transactions(
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
+    budget_period_id: Optional[int] = Query(None, description="Filter by budget period ID"),
     start_date: Optional[date] = Query(None, description="Filter by start date"),
     end_date: Optional[date] = Query(None, description="Filter by end date"),
     current_user: User = Depends(get_current_active_user),
@@ -225,6 +267,9 @@ async def read_transactions(
 
     if category_id:
         query = query.filter(Transaction.category_id == category_id)
+        
+    if budget_period_id:
+        query = query.filter(Transaction.budget_period_id == budget_period_id)
 
     if start_date:
         query = query.filter(Transaction.date >= start_date)
@@ -244,6 +289,7 @@ async def read_transactions(
             "date": transaction.date,
             "category_id": transaction.category_id,
             "category_name": transaction.category.name if transaction.category else "Uncategorized",
+            "budget_period_id": transaction.budget_period_id,
             "source": transaction.source,
             "notes": transaction.notes,
             "external_id": transaction.external_id,
@@ -316,6 +362,9 @@ async def update_transaction(
             )
 
         db_transaction.category_id = transaction_update.category_id
+
+    if transaction_update.budget_period_id is not None:
+        db_transaction.budget_period_id = transaction_update.budget_period_id
 
     if transaction_update.notes is not None:
         db_transaction.notes = transaction_update.notes

@@ -21,6 +21,7 @@ def run_migrations():
     # Run migrations
     add_external_id_to_transactions(cursor)
     make_category_id_nullable(cursor)
+    add_budget_tables(cursor)
 
     # Commit changes and close connection
     conn.commit()
@@ -63,6 +64,13 @@ def make_category_id_nullable(cursor):
     cursor.execute("PRAGMA table_info(transactions)")
     columns = cursor.fetchall()
 
+    # Check if transactions_new table exists and drop it if it does
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='transactions_new'")
+    if cursor.fetchone():
+        print("transactions_new table already exists. Dropping it...")
+        cursor.execute("DROP TABLE transactions_new")
+        print("Dropped transactions_new table.")
+
     # Create new table with the same schema but with category_id nullable
     create_table_sql = "CREATE TABLE transactions_new ("
     column_defs = []
@@ -97,6 +105,64 @@ def make_category_id_nullable(cursor):
     cursor.execute("ALTER TABLE transactions_new RENAME TO transactions")
 
     print("Successfully made category_id nullable in transactions table.")
+
+def add_budget_tables(cursor):
+    """
+    Add budget_periods and envelope_allocations tables, and add budget_period_id column to transactions table
+    """
+    print("Adding budget tables and columns...")
+
+    # Check if budget_periods table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='budget_periods'")
+    if not cursor.fetchone():
+        print("Creating budget_periods table...")
+        cursor.execute("""
+        CREATE TABLE budget_periods (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            start_date TIMESTAMP NOT NULL,
+            end_date TIMESTAMP NOT NULL,
+            total_income REAL DEFAULT 0.0,
+            user_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+        """)
+        print("budget_periods table created successfully.")
+    else:
+        print("budget_periods table already exists.")
+
+    # Check if envelope_allocations table exists
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='envelope_allocations'")
+    if not cursor.fetchone():
+        print("Creating envelope_allocations table...")
+        cursor.execute("""
+        CREATE TABLE envelope_allocations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            allocated_amount REAL DEFAULT 0.0,
+            category_id INTEGER NOT NULL,
+            budget_period_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP,
+            FOREIGN KEY (category_id) REFERENCES categories (id),
+            FOREIGN KEY (budget_period_id) REFERENCES budget_periods (id)
+        )
+        """)
+        print("envelope_allocations table created successfully.")
+    else:
+        print("envelope_allocations table already exists.")
+
+    # Check if budget_period_id column exists in transactions table
+    cursor.execute("PRAGMA table_info(transactions)")
+    columns = [column[1] for column in cursor.fetchall()]
+
+    if "budget_period_id" not in columns:
+        print("Adding budget_period_id column to transactions table...")
+        cursor.execute("ALTER TABLE transactions ADD COLUMN budget_period_id INTEGER")
+        print("Column added successfully.")
+    else:
+        print("budget_period_id column already exists in transactions table.")
 
 if __name__ == "__main__":
     run_migrations()
